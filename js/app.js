@@ -24,7 +24,7 @@ const playerButton = document.querySelector("button#player-button");
 const exportButton = document.querySelector("button#export");
 const processIndicator = document.querySelector("p#process-indicator");
 
-function getPtichPlayer () {
+function getPitchPlayer () {
     const pitch = parseFloat(pitchSlider.value);
     const { play, pause, isPlaying } = currentMixer.getPlayer(currentBuffer, pitch);
     return { play, pause, isPlaying };
@@ -36,7 +36,7 @@ function updatePitchValue() {
 
 /** @param {Event} ev */
 function playPauseHandler(ev) {
-    const { play, pause, isPlaying } = currentPlayer || getPtichPlayer();
+    const { play, pause, isPlaying } = currentPlayer || getPitchPlayer();
     if (isPlaying()) {
         ev.currentTarget.textContent = "Play";
         pause();
@@ -71,7 +71,7 @@ pitchSlider.oninput = function (ev) {
     if (!currentPlayer) return;
     currentPlayer.pause();
     playerButton.removeEventListener("click", playPauseHandler);
-    currentPlayer = getPtichPlayer();
+    currentPlayer = getPitchPlayer();
     playerButton.addEventListener("click", playPauseHandler);
 };
 
