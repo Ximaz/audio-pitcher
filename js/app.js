@@ -18,6 +18,12 @@ let currentPlayer = null;
 /** @type {String | null} */
 let currentFilename = null;
 
+
+const fileInput = document.querySelector("input#audio");
+const playerButton = document.querySelector("button#player-button");
+const exportButton = document.querySelector("button#export");
+const processIndicator = document.querySelector("p#process-indicator");
+
 function getPtichPlayer () {
     const pitch = parseFloat(pitchSlider.value);
     const { play, pause, isPlaying } = currentMixer.getPlayer(currentBuffer, pitch);
@@ -43,6 +49,7 @@ function playPauseHandler(ev) {
 async function exportModifiedSource(ev) {
     exportButton.disabled = true;
     pitchSlider.disabled = true;
+    processIndicator.textContent = "Exporting...";
 
     const pitch = parseFloat(pitchSlider.value);
     const url = await currentMixer.export(currentBuffer, pitch);
@@ -55,6 +62,7 @@ async function exportModifiedSource(ev) {
 
     exportButton.disabled = false;
     pitchSlider.disabled = false;
+    processIndicator.textContent = "";
 }
 
 
@@ -69,9 +77,6 @@ pitchSlider.oninput = function (ev) {
 
 updatePitchValue();
 
-const fileInput = document.querySelector("input#audio");
-const playerButton = document.querySelector("button#player-button");
-const exportButton = document.querySelector("button#export");
 
 fileInput.oninput = async function (ev) {
     if (1 !== ev.currentTarget.files.length) return;
