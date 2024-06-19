@@ -15,6 +15,9 @@ let currentBuffer = null;
 /** @type {Object | null} */
 let currentPlayer = null;
 
+/** @type {String | null} */
+let currentFilename = null;
+
 function getPtichPlayer () {
     const pitch = parseFloat(pitchSlider.value);
     const { play, pause, isPlaying } = currentMixer.getPlayer(currentBuffer, pitch);
@@ -37,8 +40,27 @@ function playPauseHandler(ev) {
     }
 }
 
+async function exportModifiedSource(ev) {
+    exportButton.disabled = true;
+    pitchSlider.disabled = true;
+
+    const pitch = parseFloat(pitchSlider.value);
+    const url = await currentMixer.export(currentBuffer, pitch);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${currentFilename.split(".").slice(0, -1).join(".")} ${
+        pitch < 1 ? "(Slowed down)" : "(Sped Up)"
+    }.wav`;
+    a.click();
+
+    exportButton.disabled = false;
+    pitchSlider.disabled = false;
+}
+
+
 pitchSlider.oninput = function (ev) {
     updatePitchValue();
+    if (!currentPlayer) return;
     currentPlayer.pause();
     playerButton.removeEventListener("click", playPauseHandler);
     currentPlayer = getPtichPlayer();
@@ -62,14 +84,7 @@ fileInput.oninput = async function (ev) {
     currentMixer = audioMixer;
     currentBuffer = audioBuffer;
     currentPlayer = { play, pause, isPlaying };
+    currentFilename = file.name;
     playerButton.addEventListener("click", playPauseHandler);
-    exportButton.addEventListener("click", async function (ev) {
-        const url = await audioMixer.export(audioBuffer, pitch);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = `${file.name.split(".").slice(0, -1).join(".")} ${
-            pitch < 1 ? "(Slowed down)" : "(Sped Up)"
-        }.wav`;
-        a.click();
-    });
+    exportButton.addEventListener("click", exportModifiedSource);
 };
