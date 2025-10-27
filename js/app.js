@@ -9,87 +9,81 @@ const pitchValue = document.querySelector("output#pitch-value");
 /** @type {AudioMixer | null} */
 let currentMixer = null;
 
-/** @type {AudioBuffer | null} */
-let currentBuffer = null;
-
-/** @type {Object | null} */
-let currentPlayer = null;
-
 /** @type {String | null} */
 let currentFilename = null;
 
-
+/** @type {HTMLInputElement | null} */
 const fileInput = document.querySelector("input#audio");
+
+/** @type {HTMLButtonElement | null} */
 const playerButton = document.querySelector("button#player-button");
+
+/** @type {HTMLButtonElement | null} */
 const exportButton = document.querySelector("button#export");
+
+/** @type {HTMLParagraphElement | null} */
 const processIndicator = document.querySelector("p#process-indicator");
 
-function getPitchPlayer () {
-    const pitch = parseFloat(pitchSlider.value);
-    const { play, pause, isPlaying } = currentMixer.getPlayer(currentBuffer, pitch);
-    return { play, pause, isPlaying };
-}
-
 function updatePitchValue() {
-    pitchValue.textContent = parseFloat(pitchSlider.value).toFixed(2);
+    const pitchValue = parseFloat(pitchSlider.value);
+    processIndicator.textContent = pitchValue.toFixed(2);
+    const player = currentMixer.getPlayer();
+    player.setPitch(pitchValue);
 }
 
 /** @param {Event} ev */
 function playPauseHandler(ev) {
-    const { play, pause, isPlaying } = currentPlayer || getPitchPlayer();
-    if (isPlaying()) {
+    const player = currentMixer.getPlayer();
+    console.log(player.isReady());
+    player.setLoop(true);
+    if (player.isPlaying()) {
         ev.currentTarget.textContent = "Play";
-        pause();
+        player.pause();
     } else {
         ev.currentTarget.textContent = "Pause";
-        play();
+        player.resume();
     }
 }
 
-async function exportModifiedSource(ev) {
+async function exportModifiedSource(_ev) {
     exportButton.disabled = true;
     pitchSlider.disabled = true;
     processIndicator.textContent = "Exporting...";
 
     const pitch = parseFloat(pitchSlider.value);
-    const url = await currentMixer.export(currentBuffer, pitch);
+    const { constructor, destructor } = await currentMixer.export(pitch);
+
     const a = document.createElement("a");
-    a.href = url;
-    a.download = `${currentFilename.split(".").slice(0, -1).join(".")} ${
-        pitch < 1 ? "(Slowed down)" : "(Sped Up)"
-    }.wav`;
+    a.href = constructor();
+
+    const pitchState = pitch < 1 ? "(Slowed down)" : "(Sped Up)";
+    a.download = `${currentFilename} ${pitchState}.wav`;
     a.click();
 
-    exportButton.disabled = false;
-    pitchSlider.disabled = false;
+    destructor();
     processIndicator.textContent = "";
+    pitchSlider.disabled = false;
+    exportButton.disabled = false;
 }
 
-
-pitchSlider.oninput = function (ev) {
+pitchSlider.oninput = (_ev) => {
+    playerButton.disabled = true;
     updatePitchValue();
-    if (!currentPlayer) return;
-    currentPlayer.pause();
-    playerButton.removeEventListener("click", playPauseHandler);
-    currentPlayer = getPitchPlayer();
-    playerButton.addEventListener("click", playPauseHandler);
+    playerButton.disabled = false;
 };
 
-updatePitchValue();
-
-
-fileInput.oninput = async function (ev) {
+fileInput.oninput = async (ev) => {
     if (1 !== ev.currentTarget.files.length) return;
-    /** @type {File} */
-    const file = ev.currentTarget.files[0];
-    const audioMixer = new AudioMixer(file);
-    const audioBuffer = await audioMixer.getAudioBuffer();
-    const pitch = parseFloat(pitchSlider.value);
-    const { play, pause, isPlaying } = audioMixer.getPlayer(audioBuffer, pitch);
-    currentMixer = audioMixer;
-    currentBuffer = audioBuffer;
-    currentPlayer = { play, pause, isPlaying };
-    currentFilename = file.name;
-    playerButton.addEventListener("click", playPauseHandler);
-    exportButton.addEventListener("click", exportModifiedSource);
+
+    /** @type {File[]} */
+    const files = ev.currentTarget.files;
+    const file = files[0];
+
+    currentMixer = new AudioMixer(file);
+    await currentMixer.loadAudioBuffer();
+    updatePitchValue();
+    currentFilename = file.name.split(".").slice(0, -1).join(".");
 };
+
+playerButton.onclick = playPauseHandler;
+exportButton.onclick = exportModifiedSource;
